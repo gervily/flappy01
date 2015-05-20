@@ -1,10 +1,25 @@
 // Variables importants
+
 var MeteorSurface = require('library/meteor/core/Surface');
+
+var welcomeView, welcomeSurface;
 
 var phase;
 var sinCoef = 0;
 
-var birdRotation;
+var myIndex;
+var maxPlayers = 10;
+
+var count = 0;
+var sinus = [];
+var sinusDisp = [];
+var birdImg = [];
+var birdAlive = [];
+//var birdImg = 1;
+//var birdAlive = 1;
+var birdSurfaceModifier = [];
+var birdRotation = [];
+var birdShowModifier = [];
 
 var mainContext;
 var qq;
@@ -86,7 +101,7 @@ var floorSurfaceModifier;
 
 // Physics
 var physicsEngine;
-var birdParticle;
+var birdParticle = [];
 var birdParticleMass = 2;
 var birdParticleRadius = 30;
 var birdParticleInitialPosition = [200,450,10]; // ignore
@@ -96,13 +111,13 @@ var gravity;
 var gravityForce = [0,0.0056,0];
 var floorWall;
 var floorDistance = 800;
-var birdSurface;
-var birdPositionSurfaceModifier;
-var birdRotationSurfaceModifier;
+var birdSurface = [];
+var birdPositionSurfaceModifier = [];
+var birdRotationSurfaceModifier = [];
 var birdSurfaceSize = [birdParticleRadius,birdParticleRadius];
 var birdParticleVelocityClick = [0,-0.9,0];
 var firstClick;
-var gravityId;
+var gravityId = [];
 
 var repeat;
 
@@ -167,71 +182,87 @@ function setScore(number){
   }
 }
 
-function buttonOk(){
+function otherButtonOk(index, phase){
+  if (index != myIndex){
+    sinus[index] = true;
+    birdRotation[index].set(0);
+    birdParticle[index].setPosition(birdParticleInitialPosition);
+    birdAlive[index] = 1;
+    
+    switch (phase){
+      case 'loseScore':
+        physicsEngine.detach(gravityId[index]);
+        birdParticle[index].setVelocity([0,0,0]);
+        sinusDisp[index].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn();});
+        break;
+      case 'lose':
+        physicsEngine.detach(gravityId[index]);
+        birdParticle[index].setVelocity([0,0,0]);
+        sinusDisp[index].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn();});
+        break;
+    }
+  }
+}
+
+function buttonOk(index){
   
-      Streamy.emit('gameAction', {action: 'is ready', id: Streamy.id});
-      Streamy.broadcast('gameAction', {action: 'is ready', id: Streamy.id});
+  Streamy.emit('gameAction', {action: 'is ready', id: Streamy.id, index: myIndex, phase: phase});
+  Streamy.broadcast('gameAction', {action: 'is ready', id: Streamy.id, index: myIndex, phase: phase});
+  
+  sinus[index] = true;
+  birdRotation[index].set(0);
+  birdParticle[index].setPosition(birdParticleInitialPosition);
+  birdAlive[index] = 1;
+  
   switch (phase){
     case 'startScore':
-      // Anem a start. Posar condicions inicialsi
-      sinus=true;
-      aux = [0,0];
-      birdRotation.set(0);
-      scoreSurfaceModifier[0].setTransform(Transform.translate(320,50,100));
-      scoreSurfaceModifier[1].setOpacity(0);
-      scoreSurfaceModifier[2].setOpacity(0);
-      score = 0;
-      scoreSurface[0].setContent('img/zero.png');
-      birdParticle.setPosition(birdParticleInitialPosition);
-      //console.log('>> start');
-      gameController.show(startView);
-      //phase = 'start';
-      birdAlive = 1;
-      Timer.after(function(){phase ='start';},5);      
+      if (index == myIndex){     
+        // Anem a start. Posar condicions inicialsi   
+        scoreSurface[0].setContent('img/zero.png');
+        aux = [0,0];   
+        scoreSurfaceModifier[0].setTransform(Transform.translate(320,50,100));
+        scoreSurfaceModifier[1].setOpacity(0);
+        scoreSurfaceModifier[2].setOpacity(0);
+        score = 0;
+        gameController.show(startView);
+        Timer.after(function(){phase ='start';},5);   
+      }   
       break;
     case 'loseScore':
       // Anem a start. Posar condicions inicials
-      sinus = true;
-      physicsEngine.detach(gravityId);
-      birdParticle.setVelocity([0,0,0]);
-      setColPosition();
-      aux = [0,0];
-      birdRotation.set(0);
-      scoreSurfaceModifier[0].setTransform(Transform.translate(320,50,100));
-      scoreSurfaceModifier[1].setOpacity(0);
-      scoreSurfaceModifier[2].setOpacity(0);
-      score = 0;
-      scoreSurface[0].setContent('img/zero.png');
-      birdParticle.setPosition(birdParticleInitialPosition);
-      //console.log('>> start');
-      gameController.show(startView);
-      //phase = 'start';
-      //transOut();
-      birdAlive = 1;
-      sinusDisp.set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn();});
-      Timer.after(function(){phase ='start';},5);
+      physicsEngine.detach(gravityId[index]);
+      birdParticle[index].setVelocity([0,0,0]);
+      sinusDisp[index].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn();});
+      
+      if (index == myIndex){ 
+        setColPosition();
+        aux = [0,0];
+        scoreSurfaceModifier[0].setTransform(Transform.translate(320,50,100));
+        scoreSurfaceModifier[1].setOpacity(0);
+        scoreSurfaceModifier[2].setOpacity(0);
+        score = 0;
+        scoreSurface[0].setContent('img/zero.png');
+        gameController.show(startView);
+        Timer.after(function(){phase ='start';},5);
+      }
       break;
     case 'lose':
       // Anem a start. Posar condicions inicials
-      physicsEngine.detach(gravityId);
-      birdParticle.setVelocity([0,0,0]);
-      setColPosition();
-      sinus = true;
-      aux = [0,0];
-      birdRotation.set(0);
-      scoreSurfaceModifier[0].setTransform(Transform.translate(320,50,100));
-      scoreSurfaceModifier[1].setOpacity(0);
-      scoreSurfaceModifier[2].setOpacity(0);
-      score = 0;
-      scoreSurface[0].setContent('img/zero.png');
-      birdParticle.setPosition(birdParticleInitialPosition);
-      //console.log('>> start');
-      gameController.show(startView);
-      //phase = 'start';
-      //transOut();
-      birdAlive = 1;
-      sinusDisp.set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn();});
-      Timer.after(function(){phase ='start';},5);
+      physicsEngine.detach(gravityId[index]);
+      birdParticle[index].setVelocity([0,0,0]);
+      sinusDisp[index].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn();});
+      
+      if (index == myIndex){ 
+        setColPosition();
+        aux = [0,0];
+        scoreSurfaceModifier[0].setTransform(Transform.translate(320,50,100));
+        scoreSurfaceModifier[1].setOpacity(0);
+        scoreSurfaceModifier[2].setOpacity(0);
+        score = 0;
+        scoreSurface[0].setContent('img/zero.png');
+        gameController.show(startView);
+        Timer.after(function(){phase ='start';},5);
+      }
       break;
   }
 }
@@ -248,49 +279,83 @@ function action(){
   // EngineClick, EngineSpace i EngineArrowUp
   switch (phase){
     case 'start':
-      Streamy.emit('gameAction', {action: 'started', id: Streamy.id});
-      Streamy.broadcast('gameAction', {action: 'started', id: Streamy.id});
-      startToGame();        
+      Streamy.emit('gameAction', {action: 'started', id: Streamy.id, index: myIndex});
+      Streamy.broadcast('gameAction', {action: 'started', id: Streamy.id, index: myIndex});
+      startToGame(myIndex);        
       break;
     case 'game':
       //flap
-      Streamy.emit('gameAction', {action: 'flapped', timeElapsed: 30, id: Streamy.id});
-      Streamy.broadcast('gameAction', {action: 'flapped', timeElapsed: 30, id: Streamy.id});
-      birdRotation.set(-Math.PI/3);
-      birdRotation.set(Math.PI/3, {duration : 500, curve: Easing.inExpo});
-      birdParticle.setVelocity(birdParticleVelocityClick);
+      Streamy.emit('gameAction', {action: 'flapped', timeElapsed: 30, id: Streamy.id, index: myIndex});
+      Streamy.broadcast('gameAction', {action: 'flapped', timeElapsed: 30, id: Streamy.id, index: myIndex});
+      birdFlap(myIndex);
       break;
   }
 }
 
-function startToGame(){
-  //console.log('startToGame');
-  var disp = sinusDisp.get();
-  sinus = false;
-  //birdParticle.setPosition(birdParticleInitialPosition - [0,disp,0]);
-  sinusDisp.halt();
-  sinusDisp.set(0);
-  birdRotation.set(0);
-  setColPosition();
-  numCol = 0;
-  //console.log('>> game');
-  phase = 'game';
-  colAux = colQueue;
-  //birdParticle.setPosition(birdParticleInitialPosition);
-  gameController.show(gameView);
-  //gameOn = true;
-  gravityId = physicsEngine.attach(gravity,birdParticle);
-      birdRotation.set(-Math.PI/3);
-      birdRotation.set(Math.PI/3, {duration : 500, curve: Easing.inExpo});
-  birdParticle.setVelocity(birdParticleVelocityClick);
-  // Callback
-  callback();
-  repeat = Timer.setInterval(callback,tick);
+function birdFlap(index){
+  birdRotation[index].set(-Math.PI/3);
+  birdRotation[index].set(Math.PI/3, {duration : 500, curve: Easing.inExpo});
+  birdParticle[index].setVelocity(birdParticleVelocityClick);
+}
+
+function startToGame(index){
+  
+  console.log(index);
+  // Coses per tots els clients
+  var disp = sinusDisp[index].get();
+  sinus[index] = false;
+  sinusDisp[index].halt();
+  sinusDisp[index].set(0);
+  birdRotation[index].set(0);
+  gravityId[index] = physicsEngine.attach(gravity,birdParticle[index]);
+  birdRotation[index].set(-Math.PI/3);
+  birdRotation[index].set(Math.PI/3, {duration : 500, curve: Easing.inExpo});
+  birdParticle[index].setVelocity(birdParticleVelocityClick);
+  
+  // Coses quan és el propi client
+  if (index == myIndex){
+    setColPosition();
+    numCol = 0;
+    //console.log('>> game');
+    phase = 'game';
+    colAux = colQueue;
+    //birdParticle.setPosition(birdParticleInitialPosition);
+    gameController.show(gameView);
+    //gameOn = true;
+    // Callback
+    callback();
+    repeat = Timer.setInterval(callback,tick);  
+  }  
 }
 
 // Rebre missatges
+Streamy.on('welcome',function(data){
+  console.log(data.index);
+  myIndex = data.index;
+  birdAlive[myIndex] = 1;
+  birdImg[myIndex] = 1;
+  sinus[myIndex] = 1;
+  setup();
+});
+
 Streamy.on('gameAction', function(data){
-  console.log(data.id + ' just ' + data.action + '!');
+  if (data.index != myIndex){
+     console.log(data.index + ' just ' + data.action + '!'); 
+    switch (data.action){
+      case 'lost':
+        birdLose(data.index);
+        break;
+      case 'started':
+        startToGame(data.index);
+        break;
+      case 'flapped':
+        birdFlap(data.index);
+        break;
+      case 'is ready':
+        otherButtonOk(data.index, data.phase);
+        break;
+    }
+  }
 });
 
 Streamy.on('KeyDown', function(data) {
@@ -306,14 +371,11 @@ Streamy.on('KeyDown', function(data) {
 
 function press1(){
   // Enviar a clients
-  Streamy.broadcast('KeyDown',{ data: '1' });
-  
-  // Enviar a server
-  Streamy.emit('KeyDown', { data: '1' });
+  birdShowModifier[myIndex].hide();
 }
 
 function press2(){
-  console.log('La meva id: ' + Streamy.id);
+  birdShowModifier[myIndex].show();
 }
 
 function stopCols(){
@@ -326,13 +388,19 @@ function stopCols(){
 }
 
 function sortScores(a,b){return b.score - a.score;}
+
+function birdLose(index){
+  birdAlive[index] = 0;
+}
+
 function Lose(){
   //console.log('>> lose');
   
-  Streamy.emit('gameAction', {action: 'lost', id: Streamy.id});
-  Streamy.broadcast('gameAction', {action: 'lost', id: Streamy.id});
+  Streamy.emit('gameAction', {action: 'lost', id: Streamy.id, index: myIndex});
+  Streamy.broadcast('gameAction', {action: 'lost', id: Streamy.id, index: myIndex});
   
-  birdAlive = 0;
+  //birdAlive[myIndex] = 0;
+  birdLose(myIndex);
   phase = 'lose';
   Timer.clear(repeat);
   stopCols();
@@ -350,21 +418,18 @@ function Lose(){
       posicio = i;
     }
   }
-  
 }
 
-var sinusDisp;
-var sinus = true;
 
 function transIn (){
-  if (sinus){
-    sinusDisp.set(50, {duration : 700, curve: Easing.inOutQuad}, function(){transOut();});
+  if (sinus[myIndex]){
+    sinusDisp[myIndex].set(50, {duration : 700, curve: Easing.inOutQuad}, function(){transOut();});
   }
 }
 
 function transOut (){
-  if (sinus){
-    sinusDisp.set(-50, {duration : 700, curve: Easing.inOutQuad }, function(){transIn();});
+  if (sinus[myIndex]){
+    sinusDisp[myIndex].set(-50, {duration : 700, curve: Easing.inOutQuad }, function(){transIn();});
   }
 }
 
@@ -392,26 +457,23 @@ function buttonScore(){
   }
 }
 
-var count = 0;
-var birdImg = 1;
-var birdAlive = 1;
 
 function collisionFunction(){
-  if (birdAlive){
+  if (birdAlive[myIndex]){
     if ( count == 15){
       count = 0;
-      switch (birdImg){
+      switch (birdImg[myIndex]){
         case 1:
-          birdImg = 2;
-          birdSurface.setContent('img/birdie_2.png');
+          birdImg[myIndex] = 2;
+          birdSurface[myIndex].setContent('img/birdie_2.png');
           break;
         case 2:
-          birdImg = 3;
-          birdSurface.setContent('img/birdie_3.png');
+          birdImg[myIndex] = 3;
+          birdSurface[myIndex].setContent('img/birdie_3.png');
           break;
         case 3:
-          birdImg = 1;
-          birdSurface.setContent('img/birdie_1.png');
+          birdImg[myIndex] = 1;
+          birdSurface[myIndex].setContent('img/birdie_1.png');
           break;
       }
     }
@@ -420,9 +482,9 @@ function collisionFunction(){
   
   if (phase == 'game'){
   
-    if (birdParticle.position.y > (960-heightFloor-birdParticleRadius)){
+    if (birdParticle[myIndex].position.y > (960-heightFloor-birdParticleRadius)){
       Lose();
-      birdParticle.setVelocity([0,-0.5,0]);
+      birdParticle[myIndex].setVelocity([0,-0.5,0]);
     }
     
     for (var i = 0; i < numCols; i++ ){
@@ -438,14 +500,14 @@ function collisionFunction(){
         }
         
         // Mirem en Y
-        if ( ((birdParticle.position.y - birdParticleRadius) < colTopSurfaceModifier[i].getTransform()[13]) || ( (birdParticle.position.y + birdParticleRadius) > colBotSurfaceModifier[i].getTransform()[13]) ){
+        if ( ((birdParticle[myIndex].position.y - birdParticleRadius) < colTopSurfaceModifier[i].getTransform()[13]) || ( (birdParticle[myIndex].position.y + birdParticleRadius) > colBotSurfaceModifier[i].getTransform()[13]) ){
           // You lose naab
           //console.log('xd noob');
           //console.log('>> lose');
           //phase = 'lose';
           erasethis++;
           Lose();
-          birdParticle.setVelocity([0,-0.5,0]);
+          birdParticle[myIndex].setVelocity([0,-0.5,0]);
         }
       }
       else{
@@ -513,12 +575,49 @@ function setColPosition(){
   }
 }
 
-// Main
 Meteor.startup(function(){
-  birdRotation = new Transitionable(0);
-  sinusDisp = new Transitionable(0);
+    gameController = new RenderController({
+    inTransition: {curve: Easing.inOutQuart, duration: 0},
+    outTransition: {curve: Easing.inOutQuart, duration: 0},
+    overlap: true
+  });
+  
+  gameControllerModifier = new Modifier({
+    size: [640,960],
+    align: [0.5,0],
+    origin: [0.5,0],
+    transform: function(){
+      var scale = Math.min(window.innerWidth / 640,(window.innerHeight / 960)*1);
+      return Transform.scale(scale,scale,1);
+    }
+  });
+  
+  mainContext = Engine.createContext();
+  mainContext.add(gameControllerModifier).add(gameController);
+  
+  welcomeSurface = new Surface({
+    content: 'hehe',
+    properties:{
+      backgroundColor: 'blue'
+    }
+  });
+  welcomeView = new View();
+  welcomeView.add(welcomeSurface);
+  gameController.show(welcomeView);
+  
+
+});
+
+// Main
+function setup(){
+  
+  for (var i = 0; i < maxPlayers; i++){
+    birdRotation[i] = new Transitionable(0);
+    sinusDisp[i] = new Transitionable(0);   
+  }
+  
   //transOut();
-  sinusDisp.set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn();});
+  sinusDisp[myIndex].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn();});
   //console.log(( (960-heightFloor-spaceMin-(spaceHeight/2)) - (spaceMin+(spaceHeight/2)) ));
   // Col Queue
   colQueue = new Queue();
@@ -751,22 +850,6 @@ Meteor.startup(function(){
     }
   });
   
-  gameController = new RenderController({
-    inTransition: {curve: Easing.inOutQuart, duration: 0},
-    outTransition: {curve: Easing.inOutQuart, duration: 0},
-    overlap: true
-});
-  
-  gameControllerModifier = new Modifier({
-    size: [640,960],
-    align: [0.5,0],
-    origin: [0.5,0],
-    transform: function(){
-      var scale = Math.min(window.innerWidth / 640,(window.innerHeight / 960)*1);
-      return Transform.scale(scale,scale,1);
-    }
-  });
-  
   clickSurface = new Surface({
     size: [undefined,undefined],
     properties:
@@ -781,53 +864,123 @@ Meteor.startup(function(){
   
   // Physics
   physicsEngine = new PhysicsEngine();
-  birdParticle = new Circle({
-    mass: birdParticleMass,
-    radius: birdParticleRadius,
-    position: birdParticleInitialPosition,
-    velocity: birdParticleInitialVelocity
-  });
-  
-  physicsEngine.addBody(birdParticle);
   gravity = new Force(gravityForce);
   floorWall = new Wall({ normal: [0,-1,0], distance: (960-heightFloor)});
-  physicsEngine.attach(floorWall,birdParticle);
   
-  birdSurface = new ImageSurface({
-    content: 'img/birdie_1.png'
-  });
-  birdSurfaceModifier = new Modifier({
+  for (var i = 0; i < maxPlayers; i++ ){
+    birdParticle[i] = new Circle({
+      mass: birdParticleMass,
+      radius: birdParticleRadius,
+      position: birdParticleInitialPosition,
+      velocity: birdParticleInitialVelocity
+    });  
+    physicsEngine.addBody(birdParticle[i]);
+    physicsEngine.attach(floorWall,birdParticle[i]);
+  
+  
+    birdSurface[i] = new ImageSurface({
+      content: 'img/birdie_1.png'
+    });
+  
+    birdShowModifier[i] = new ShowModifier({visible: true});
+
+/*    
+    birdSurfaceModifier[i] = new Modifier({
+      opacity: 1,
+      transform: returnPlz(i)
+    });  
+
+    birdRotationSurfaceModifier[i] = new Modifier({
+      size: [76,57],
+      origin: [0.5,0.5],
+        align: [0.5,0.5],
+        transform: function(){
+          return Transform.rotateZ(birdRotation[i].get());
+        }
+      }
+    );
+
+    birdPositionSurfaceModifier[i] = new Modifier({
+      size: [76,57],
+      origin: [0.5,0.5],
+      transform: function(){
+        return birdParticle[i].getTransform();
+      }
+    });
+    */
+  }
+  
+  /*
+  
+  function returnPlz(i){
+    return Transform.translate(0,sinusDisp[i],0);
+  }
+  
+  */
+  
+  // MEH
+  
+  birdSurfaceModifier[0] = new Modifier({
     opacity: 1,
     transform: function(){
-      return Transform.translate(0,sinusDisp.get(),0);
-    }
-  });  
-  
-  birdRotationSurfaceModifier = new Modifier(
-    
-    {
-    size: [76,57],
-    origin: [0.5,0.5],
-      align: [0.5,0.5],
-    transform: function(){
-      return Transform.rotateZ(birdRotation.get());
-    }
-  }
-  );
-  
-  birdPositionSurfaceModifier = new Modifier({
-    size: [76,57],
-    origin: [0.5,0.5],
-    transform: function(){
-      return birdParticle.getTransform();
+      return Transform.translate(0,sinusDisp[0].get(),0);
     }
   });
+
+  birdRotationSurfaceModifier[0] = new Modifier({
+    size: [76,57],
+    origin: [0.5,0.5],
+    align: [0.5,0.5],
+    transform: function(){
+      return Transform.rotateZ(birdRotation[0].get());
+    }
+  }
+                                               );
+
+  birdPositionSurfaceModifier[0] = new Modifier({
+    size: [76,57],
+    origin: [0.5,0.5],
+    transform: function(){
+      return birdParticle[0].getTransform();
+    }
+  });
+  
+  birdSurfaceModifier[1] = new Modifier({
+    opacity: 1,
+    transform: function(){
+      return Transform.translate(0,sinusDisp[1].get(),0);
+    }
+  });
+
+  birdRotationSurfaceModifier[1] = new Modifier({
+    size: [76,57],
+    origin: [0.5,0.5],
+    align: [0.5,0.5],
+    transform: function(){
+      return Transform.rotateZ(birdRotation[1].get());
+    }
+  }
+                                               );
+
+  birdPositionSurfaceModifier[1] = new Modifier({
+    size: [76,57],
+    origin: [0.5,0.5],
+    transform: function(){
+      return birdParticle[1].getTransform();
+    }
+  });
+  // END MEH
+  
   
   // gameView Setup
   gameView = new View();
   gameView.add(gameBackgroundSurface);
   gameView.add(floorSurfaceModifier).add(floorSurface);
-  gameView.add(birdPositionSurfaceModifier).add(birdSurfaceModifier).add(birdRotationSurfaceModifier).add(birdSurface);
+  
+  for (var i = 0; i < maxPlayers; i++ ){
+    gameView.add(birdShowModifier[i]).add(birdPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
+  }
+  
   for (var j = 0; j < numCols; j++){
     gameView.add(colTopSurfaceModifier[j]).add(colTopSurface[j]);
     gameView.add(colBotSurfaceModifier[j]).add(colBotSurface[j]);
@@ -850,7 +1003,11 @@ Meteor.startup(function(){
   lostView.add(scoreSurfaceModifier[1]).add(scoreSurface[1]);
   lostView.add(scoreSurfaceModifier[2]).add(scoreSurface[2]);
   lostView.add(floorSurfaceModifier).add(floorSurface);
-  lostView.add(birdPositionSurfaceModifier).add(birdSurfaceModifier).add(birdRotationSurfaceModifier).add(birdSurface);
+  
+  for (var i = 0; i < maxPlayers; i++ ){
+    lostView.add(birdShowModifier[i]).add(birdPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
+  }
+  
   for (var j = 0; j < numCols; j++){
     lostView.add(colTopSurfaceModifier[j]).add(colTopSurface[j]);
     lostView.add(colBotSurfaceModifier[j]).add(colBotSurface[j]);
@@ -873,7 +1030,10 @@ Meteor.startup(function(){
     scoreView.add(colBotSurfaceModifier[j]).add(colBotSurface[j]);
   }
   
-  scoreView.add(birdPositionSurfaceModifier).add(birdSurfaceModifier).add(birdRotationSurfaceModifier).add(birdSurface);
+  for (var i = 0; i < maxPlayers; i++ ){
+    scoreView.add(birdShowModifier[i]).add(birdPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
+  }
+  
   scoreView.add(gameBackgroundSurface);
   scoreView.add(floorSurfaceModifier).add(floorSurface);
   scoreView.add(backgroundBotModifier).add(backgroundBot);
@@ -895,7 +1055,11 @@ Meteor.startup(function(){
   
   startView.add(readySurfaceModifier).add(readySurface);
   
-  startView.add(birdPositionSurfaceModifier).add(birdSurfaceModifier).add(birdRotationSurfaceModifier).add(birdSurface);
+  for (var i = 0; i < maxPlayers; i++ ){
+    startView.add(birdShowModifier[i]).add(birdPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
+  }
+  
+  startView.add(birdShowModifier).add(birdPositionSurfaceModifier).add(birdSurfaceModifier).add(birdRotationSurfaceModifier).add(birdSurface);
   startView.add(gameBackgroundSurface);
   startView.add(floorSurfaceModifier).add(floorSurface);
   startView.add(backgroundBotModifier).add(backgroundBot);
@@ -903,8 +1067,7 @@ Meteor.startup(function(){
   scoreView.add(backgroundLeftModifier).add(backgroundLeft);
   
   // mainContext setup
-  mainContext = Engine.createContext();
-  mainContext.add(gameControllerModifier).add(gameController);
+
   
   // Start
   //console.log('>> start');
@@ -937,11 +1100,11 @@ Meteor.startup(function(){
   });
   
   scoreViewButtonOk.on('mousedown',function(){
-    buttonOk();
+    buttonOk(myIndex);
   });
   
   buttonOkSurface.on('mousedown', function(){
-    buttonOk();
+    buttonOk(myIndex);
   });
   buttonScoreSurface.on('mousedown', function(){
     buttonScore();
@@ -993,8 +1156,11 @@ Meteor.startup(function(){
     }
   });
   
-});
+}
 
+function returnPlz(i){
+  return Transform.translate(0,sinusDisp[i],0);
+}
 
 /* Creates a new queue. A queue is a first-in-first-out (FIFO) data structure -
  * items are added to the end of the queue and removed from the front.
@@ -1053,3 +1219,30 @@ function Queue(){
   }
 
 }
+
+var Transform = require('famous/core/Transform');
+ 
+function ShowModifier(options) {
+  this.visible = !!options.visible;
+  this._output = {
+    transform: Transform.identity,
+    opacity: 1,
+    origin: null,
+    align: null,
+    size: null,
+    target: null
+  };
+}
+ 
+ShowModifier.prototype.modify = function(target){
+  this._output.target = this.visible? target: null;
+  return this._output;
+};
+ 
+ShowModifier.prototype.show = function show(){
+  this.visible = true;
+};
+ 
+ShowModifier.prototype.hide = function hide() {
+  this.visible = false;
+};

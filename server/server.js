@@ -1,3 +1,5 @@
+
+
 Streamy.BroadCasts.allow = function(data, from) {
   // from is the socket object
   // data contains raw data you can access:
@@ -62,6 +64,21 @@ Streamy.onDisconnect(function(socket) {
   console.log('User left: ' + socket.id);
 });
 
+/*
+/  onConnect
+/  Quan un usuari es connecta se li
+/  envia confirmació de que ha sigut rebut pel server
+/  Quan el client ho rep, comença a crear el joc
+*/
+var numPlayer = 0;
+
+Meteor.startup(function(){
+  numPlayer = 0;
+  console.log('Server startup');
+});
+
 Streamy.onConnect(function(socket) {
-  console.log('User joined: ' + socket.id);
+  console.log('User joined. Assignat el número ' + numPlayer);
+  Streamy.emit('welcome', { index: numPlayer }, socket);
+  numPlayer++;
 });
