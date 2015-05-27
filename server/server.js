@@ -2,6 +2,8 @@ var numPlayer;
 var maxPlayers;
 var sockets;
 var players;
+var level = [];
+var numCols;
 
 Meteor.startup(function(){
   // Server setup
@@ -13,6 +15,11 @@ Meteor.startup(function(){
     players[i] = "free";
   }
   
+  // Level
+  numCols = 1000;
+  for ( var i = 0; i < numCols; i++ ){
+    level[i] = Math.floor((Math.random()*401) + 177);
+  }
   // Other
   numPlayer = 0;
 });
@@ -26,7 +33,7 @@ Streamy.onConnect(function(socket) {
       if ( !trobat ){
         trobat = 1;
         players[i] = { "index" : i, "id" : socket.id, "phase" : "phase", "isMoving" : 0};
-        Streamy.emit('welcome', { index: i, maxplayers: maxPlayers }, socket);
+        Streamy.emit('welcome', { index: i, maxplayers: maxPlayers, level: level }, socket);
         console.log('Index ' + i + ' assigned.');          
         // Notificar als altres
         Streamy.broadcast('showBird', { index : i}); 

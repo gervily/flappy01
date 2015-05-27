@@ -3,6 +3,8 @@
 var MeteorSurface = require('library/meteor/core/Surface');
 
 var welcomeView, welcomeSurface;
+var level = [];
+var currCol;
 
 var phase;
 var sinCoef = 0;
@@ -113,7 +115,8 @@ var gravityForce = [0,0.0056,0];
 var floorWall;
 var floorDistance = 800;
 var birdSurface = [];
-var birdPositionSurfaceModifier = [];
+var birdYPositionSurfaceModifier = [];
+var birdXPositionSurfaceModifier = [];
 var birdRotationSurfaceModifier = [];
 var birdSurfaceSize = [birdParticleRadius,birdParticleRadius];
 var birdParticleVelocityClick = [0,-0.9,0];
@@ -194,11 +197,13 @@ function otherButtonOk(index, phase){
       case 'loseScore':
         physicsEngine.detach(gravityId[index]);
         birdParticle[index].setVelocity([0,0,0]);
+        console.log('Comença loop ('+ index +',c)');
         sinusDisp[index].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn(index);});
         break;
       case 'lose':
         physicsEngine.detach(gravityId[index]);
         birdParticle[index].setVelocity([0,0,0]);
+        console.log('Comença loop ('+ index +',d)');
         sinusDisp[index].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn(index);});
         break;
     }
@@ -233,6 +238,7 @@ function buttonOk(index){
       // Anem a start. Posar condicions inicials
       physicsEngine.detach(gravityId[index]);
       birdParticle[index].setVelocity([0,0,0]);
+      console.log('Comença loop ('+ index +',e)');
       sinusDisp[index].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn(index);});
       
       if (index == myIndex){ 
@@ -251,6 +257,7 @@ function buttonOk(index){
       // Anem a start. Posar condicions inicials
       physicsEngine.detach(gravityId[index]);
       birdParticle[index].setVelocity([0,0,0]);
+      console.log('Comença loop ('+ index +',f)');
       sinusDisp[index].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn(index);});
       
       if (index == myIndex){ 
@@ -301,7 +308,7 @@ function birdFlap(index){
 
 function startToGame(index){
   
-  console.log(index);
+  console.log('startToGame (index: '+index+') sinus false');
   // Coses per tots els clients
   var disp = sinusDisp[index].get();
   sinus[index] = false;
@@ -333,6 +340,7 @@ function startToGame(index){
 // Rebre missatges
 Streamy.on('welcome',function(data){
   maxPlayers = data.maxplayers;
+  level = data.level;
   //console.log(maxPlayers);
   if ( data.index == -1 ){
     console.log('fu. no room 4 me');
@@ -356,12 +364,18 @@ Streamy.on('showBird', function(data){
     pendingShows.push(data.index);
   }
   else{
-    birdShowModifier[data.index].show();  
-    console.log(sinus);
+    birdShowModifier[data.index].show();    
+    if ( data.index != myIndex ){
+      sinus[data.index] = true;
+      console.log('Comença loop ('+ data.index +',z)');
+      sinusDisp[data.index].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn(data.index);});
+    }
+    //console.log(sinus);
   }
 });
 Streamy.on('hideBird', function(data){
   birdShowModifier[data.index].hide();
+  sinus[data.index] = false;
 });
 
 Streamy.on('gameAction', function(data){
@@ -430,6 +444,7 @@ function Lose(){
   phase = 'lose';
   Timer.clear(repeat);
   stopCols();
+  currCol = 0;
   gameController.show(lostView);
   var id = Scores.insert({
     score: score,
@@ -451,12 +466,18 @@ function transIn (index){
   if (sinus[index]){
     sinusDisp[index].set(50, {duration : 700, curve: Easing.inOutQuad}, function(){transOut(index);});
   }
+  else{
+    console.log('transIn stop (index '+ index +')');
+  }
 }
 
 function transOut (index){
-  console.log('transout ' + index);
+  //console.log('transout ' + index);
   if (sinus[index]){
     sinusDisp[index].set(-50, {duration : 700, curve: Easing.inOutQuad }, function(){transIn(index);});
+  }
+  else{
+    console.log('transOut stop (index '+ index +')');
   }
 }
 
@@ -559,7 +580,9 @@ function collisionFunction(){
 function callback(){
   
   if ( colAux.isEmpty() === false ){
-    var randomVal = colAux.dequeue();
+    //var randomVal = colAux.dequeue();
+    var randomVal = level[currCol];
+    currCol += 1;
     var auxTop = randomVal - (spaceHeight/2);
     var auxBot = 960 - heightFloor - (randomVal+(spaceHeight/2));
     var w_mitja = 800 * w_space;
@@ -603,7 +626,8 @@ function setColPosition(){
 }
 
 Meteor.startup(function(){
-    gameController = new RenderController({
+  
+  gameController = new RenderController({
     inTransition: {curve: Easing.inOutQuart, duration: 0},
     outTransition: {curve: Easing.inOutQuart, duration: 0},
     overlap: true
@@ -632,11 +656,15 @@ Meteor.startup(function(){
   welcomeView.add(welcomeSurface);
   gameController.show(welcomeView);
   
-
+  text.draw();
+  text.increment();
+  text.draw();
 });
 
 // Main
 function setup(){
+  
+  currCol = 0;
   
   for (var i = 0; i < maxPlayers; i++){
     birdRotation[i] = new Transitionable(0);
@@ -645,6 +673,8 @@ function setup(){
   }
   
   //transOut();
+  sinus[myIndex] = true;
+  console.log('Comença loop ('+ myIndex +',a)');
   sinusDisp[myIndex].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn(myIndex);});
   //console.log(( (960-heightFloor-spaceMin-(spaceHeight/2)) - (spaceMin+(spaceHeight/2)) ));
   // Col Queue
@@ -928,7 +958,7 @@ function setup(){
       }
     );
 
-    birdPositionSurfaceModifier[i] = new Modifier({
+    birdYPositionSurfaceModifier[i] = new Modifier({
       size: [76,57],
       origin: [0.5,0.5],
       transform: function(){
@@ -961,7 +991,7 @@ function setup(){
         return Transform.rotateZ(birdRotation[i].get());
       }
     });
-    birdPositionSurfaceModifier[i] = new Modifier({
+    birdYPositionSurfaceModifier[i] = new Modifier({
       size: [76,57],
       origin: [0.5,0.5],
       transform: function(){
@@ -990,7 +1020,7 @@ function setup(){
       return Transform.rotateZ(birdRotation[0].get());
     }
   });
-  birdPositionSurfaceModifier[0] = new Modifier({
+  birdYPositionSurfaceModifier[0] = new Modifier({
     size: [76,57],
     origin: [0.5,0.5],
     transform: function(){
@@ -1015,7 +1045,7 @@ function setup(){
   }
                                                );
 
-  birdPositionSurfaceModifier[1] = new Modifier({
+  birdYPositionSurfaceModifier[1] = new Modifier({
     size: [76,57],
     origin: [0.5,0.5],
     transform: function(){
@@ -1031,7 +1061,7 @@ function setup(){
   gameView.add(floorSurfaceModifier).add(floorSurface);
   
   for (var i = 0; i < maxPlayers; i++ ){
-    gameView.add(birdShowModifier[i]).add(birdPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
+    gameView.add(birdShowModifier[i]).add(birdYPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
   }
   
   for (var j = 0; j < numCols; j++){
@@ -1058,7 +1088,7 @@ function setup(){
   lostView.add(floorSurfaceModifier).add(floorSurface);
   
   for (var i = 0; i < maxPlayers; i++ ){
-    lostView.add(birdShowModifier[i]).add(birdPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
+    lostView.add(birdShowModifier[i]).add(birdYPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
   }
   
   for (var j = 0; j < numCols; j++){
@@ -1084,7 +1114,7 @@ function setup(){
   }
   
   for (var i = 0; i < maxPlayers; i++ ){
-    scoreView.add(birdShowModifier[i]).add(birdPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
+    scoreView.add(birdShowModifier[i]).add(birdYPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
   }
   
   scoreView.add(gameBackgroundSurface);
@@ -1109,10 +1139,10 @@ function setup(){
   startView.add(readySurfaceModifier).add(readySurface);
   
   for (var i = 0; i < maxPlayers; i++ ){
-    startView.add(birdShowModifier[i]).add(birdPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
+    startView.add(birdShowModifier[i]).add(birdYPositionSurfaceModifier[i]).add(birdSurfaceModifier[i]).add(birdRotationSurfaceModifier[i]).add(birdSurface[i]);
   }
   
-  startView.add(birdShowModifier).add(birdPositionSurfaceModifier).add(birdSurfaceModifier).add(birdRotationSurfaceModifier).add(birdSurface);
+  startView.add(birdShowModifier).add(birdYPositionSurfaceModifier).add(birdSurfaceModifier).add(birdRotationSurfaceModifier).add(birdSurface);
   startView.add(gameBackgroundSurface);
   startView.add(floorSurfaceModifier).add(floorSurface);
   startView.add(backgroundBotModifier).add(backgroundBot);
@@ -1122,7 +1152,7 @@ function setup(){
   // mainContext setup
   
   // Pending shows...
-  console.log(pendingShows.length);
+  console.log('Num pending shows: ' + pendingShows.length);
   while (pendingShows.length !== 0){
     var k = pendingShows.pop();
     birdShowModifier[k].show();
@@ -1132,6 +1162,8 @@ function setup(){
   }
   
   function loopAux2(i){
+    
+  console.log('Comença loop ('+ i +',b)');
     sinusDisp[i].set(-50, {duration : 350, curve: Easing.outQuad}, function(){transIn(i);});
   }
   
